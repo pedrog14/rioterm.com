@@ -1534,9 +1534,9 @@ Note: **Variables are not case sensitive.**
 Possible options:
 
 - `TITLE`: terminal title via OSC sequences for setting terminal title
-- `PROGRAM`: (e.g `fish`, `zsh`, `bash`, `vim`, etc...)
-- `ABSOLUTE_PATH`: (e.g `/Users/rapha/Documents/a/rio`)
-- `RELATIVE_PATH`: home-relative path, shortened when deep (e.g `~/Documents/a/rio` or `…/a/psone/starpsx`)
+- `PROGRAM`: the command the pane spawned (e.g `fish`, `zsh`, `bash`)
+- `ABSOLUTE_PATH`: working directory reported via OSC 7, empty for shells without that integration (e.g `/Users/rapha/Documents/a/rio`)
+- `RELATIVE_PATH`: the OSC 7 directory home-relative, shortened when deep (e.g `~/Documents/a/rio` or `…/a/psone/starpsx`)
 - `COLUMNS`: current columns
 - `LINES`: current lines
 
@@ -1570,6 +1570,18 @@ content = "{{ TITLE || RELATIVE_PATH }}"
 In this case, `TITLE` is non-existent so will use `RELATIVE_PATH`.
 
 Result: `~/Documents/a/rio`
+
+#### Path variables and shell integration
+
+The path variables read the working directory your shell reports via the OSC 7 escape sequence, so titles update instantly with no process polling. Prompt frameworks like starship and oh-my-zsh already emit it. If your shell does not, add this to `~/.zshrc`:
+
+```sh
+_rio_report_pwd() { printf '\e]7;file://%s%s\a' "$HOST" "$PWD"; }
+chpwd_functions+=(_rio_report_pwd)
+precmd_functions+=(_rio_report_pwd)
+```
+
+Without OSC 7 the path variables render empty (fall back with `||`).
 
 ## title.placeholder
 

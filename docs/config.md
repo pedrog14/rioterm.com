@@ -214,6 +214,17 @@ audio = true
 On Linux and BSD systems, audio bell support requires Rio to be compiled with the `audio` feature flag. Distribution packages typically don't include this feature to minimize dependencies. See [Build from source](/docs/install/build-from-source) for compilation instructions with audio support.
 :::
 
+#### Tab indicator
+
+When a background tab rings the bell, a small dot is drawn next to that tab's title in the tab strip. The mark clears the moment the tab is shown. A bell in the focused tab of an unfocused window marks it too, so the alert survives until you actually look at it.
+
+Default is `true`.
+
+```toml
+[bell]
+tab-indicator = true
+```
+
 ## developer
 
 This property enables log level filter and file. The default level is "OFF" and the logs are not logged to a file as default. The level may be `DEBUG`, `INFO`, `TRACE`, `ERROR`, `WARN` or `OFF`.
@@ -1410,6 +1421,35 @@ program = "/opt/homebrew/bin/tmux"
 args = ["new-session", "-c", "/var/www"]
 ```
 
+## shell-integration
+
+Rio injects a small shell integration script into spawned shells, so the shell reports its working directory to the terminal (OSC 7) on every prompt and directory change with no user setup. This powers the [`title.content`](#titlecontent) path variables and opening new tabs in the current directory.
+
+How it loads, per shell:
+
+- **zsh**: via `ZDOTDIR`; your own `ZDOTDIR` and `.zshenv` are restored and run first.
+- **fish**: via a `vendor_conf.d` entry prepended to `XDG_DATA_DIRS`.
+- **PowerShell** (`powershell.exe` and `pwsh`, on Windows and unix): the shell is started with `-NoExit -EncodedCommand` carrying the script inline, after your `$PROFILE` runs. Custom `shell.args` disable the rewrite, and the inline form works under the default Windows execution policy.
+- Other shells (bash, cmd.exe, nushell) are left untouched; see the manual hook below.
+
+Every integrated pane also exports `RIO_SHELL_INTEGRATION`, pointing at the script directory. Shells without automatic injection can source the integration manually, and nested shells can re-load it, for example in `~/.zshrc`:
+
+```sh
+if [ -n "$RIO_SHELL_INTEGRATION" ]; then
+    source "$RIO_SHELL_INTEGRATION/zsh/rio-integration.zsh"
+fi
+```
+
+Rio also understands working directories reported by existing integrations: OSC 7 as `file://` or `kitty-shell-cwd://` URLs, and the ConEmu/Windows Terminal `OSC 9;9` sequence, so a prompt already configured for another terminal keeps working.
+
+To disable the injection entirely:
+
+```toml
+shell-integration = false
+```
+
+Default is `true`.
+
 ## theme
 
 The configuration property `theme` is used for specifying the theme. Rio will look in the `themes` folder for the theme.
@@ -1573,7 +1613,7 @@ Result: `~/Documents/a/rio`
 
 #### Path variables and shell integration
 
-The path variables read the working directory your shell reports via the OSC 7 escape sequence, so titles update instantly with no process polling. Prompt frameworks like starship and oh-my-zsh already emit it. If your shell does not, add this to `~/.zshrc`:
+The path variables read the working directory your shell reports via the OSC 7 escape sequence, so titles update instantly with no process polling. Rio's [shell integration](#shell-integration) injects the reporting automatically for zsh, fish and PowerShell, and prompt frameworks like starship and oh-my-zsh already emit it. For other shells, add the equivalent of this zsh snippet to your shell's config:
 
 ```sh
 _rio_report_pwd() { printf '\e]7;file://%s%s\a' "$HOST" "$PWD"; }
@@ -1581,7 +1621,7 @@ chpwd_functions+=(_rio_report_pwd)
 precmd_functions+=(_rio_report_pwd)
 ```
 
-Without OSC 7 the path variables render empty (fall back with `||`).
+Without a reported directory the path variables render empty (fall back with `||`).
 
 ## title.placeholder
 

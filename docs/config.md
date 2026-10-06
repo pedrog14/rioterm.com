@@ -992,7 +992,7 @@ mode = "NativeTab"
 
 #### Plain
 
-Plain navigation mode will simply turn off any tab key binding.
+Plain navigation mode will simply turn off any tab key binding, also hiding the title bar.
 
 This mode is perfect if you use Rio terminal with tmux or zellij.
 
